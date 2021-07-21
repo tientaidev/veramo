@@ -2,19 +2,17 @@
   "IMessageThreads": {
     "components": {
       "schemas": {
-        "IMessageThreadsGetThreadsArgs": {
+        "IMessageThreadsGetThreadByIdArgs": {
           "type": "object",
           "properties": {
-            "archived": {
-              "type": "boolean",
-              "description": "Archived"
-            },
-            "order": {
+            "threadId": {
               "type": "string",
-              "description": "Order"
+              "description": "Thread ID"
             }
           },
-          "description": "Contains the parameters of a Message Thread Request"
+          "required": [
+            "threadId"
+          ]
         },
         "IMessageThreadsThreadResult": {
           "type": "object",
@@ -329,9 +327,32 @@
             "proof"
           ],
           "description": "Verifiable Presentation  {@link  https://github.com/decentralized-identifier/did-jwt-vc }"
+        },
+        "IMessageThreadsGetThreadsArgs": {
+          "type": "object",
+          "properties": {
+            "archived": {
+              "type": "boolean",
+              "description": "Archived"
+            },
+            "order": {
+              "type": "string",
+              "description": "Order"
+            }
+          },
+          "description": "Contains the parameters of a Message Thread Request"
         }
       },
       "methods": {
+        "getThreadById": {
+          "description": "",
+          "arguments": {
+            "$ref": "#/components/schemas/IMessageThreadsGetThreadByIdArgs"
+          },
+          "returnType": {
+            "$ref": "#/components/schemas/IMessageThreadsThreadResult"
+          }
+        },
         "getThreads": {
           "description": "",
           "arguments": {
