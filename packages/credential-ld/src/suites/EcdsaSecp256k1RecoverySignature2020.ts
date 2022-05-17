@@ -9,15 +9,15 @@ import * as u8a from 'uint8arrays'
 import { asArray, encodeJoseBlob } from '@veramo/utils'
 
 export class VeramoEcdsaSecp256k1RecoverySignature2020 extends VeramoLdSignature {
-  getSupportedVerificationType(): string {
-    return 'EcdsaSecp256k1RecoveryMethod2020'
+  getSupportedVerificationTypes(): string[] {
+    return ['EcdsaSecp256k1RecoveryMethod2020', "EcdsaSecp256k1VerificationKey2019"]
   }
 
-  getSupportedVeramoKeyType(): TKeyType {
-    return 'Secp256k1'
+  getSupportedVeramoKeyTypes(): string[] {
+    return ['Secp256k1', 'EcdsaSecp256k1RecoverySignature2020']
   }
 
-  getSuiteForSigning(
+  getSigningSuiteInstance(
     key: IKey,
     did: string,
     verifiableMethodId: string,
@@ -45,27 +45,30 @@ export class VeramoEcdsaSecp256k1RecoverySignature2020 extends VeramoLdSignature
       },
     }
 
-    return new EcdsaSecp256k1RecoverySignature2020({
+    const suite = new EcdsaSecp256k1RecoverySignature2020({
       // signer,
       key: new EcdsaSecp256k1RecoveryMethod2020({
         publicKeyHex: key.publicKeyHex,
         signer: () => signer,
-        type: this.getSupportedVerificationType(),
+        type: this.getSupportedVerificationTypes()[0],
         controller,
         id: verifiableMethodId,
       }),
     })
+
+    suite.ensureSuiteContext = ({ document, addSuiteContext }: { document: any, addSuiteContext: boolean }) => {
+      document['@context'] = [...asArray(document['@context'] || []), this.getContext()]
+    }
+
+    return suite
   }
 
-  getSuiteForVerification(): any {
+  getVerificationSuiteInstance(): any {
     return new EcdsaSecp256k1RecoverySignature2020()
   }
 
   preSigningCredModification(credential: CredentialPayload): void {
-    credential['@context'] = [
-      ...asArray(credential['@context'] || []),
-      'https://identity.foundation/EcdsaSecp256k1RecoverySignature2020/lds-ecdsa-secp256k1-recovery2020-0.0.jsonld',
-    ]
+    // credential['@context'] = [...asArray(credential['@context'] || []), this.getContext()]
   }
 
   preDidResolutionModification(didUrl: string, didDoc: DIDDocument): void {
@@ -79,5 +82,9 @@ export class VeramoEcdsaSecp256k1RecoverySignature2020 extends VeramoLdSignature
         }
       })
     }
+  }
+
+  getContext(): string {
+    return 'https://identity.foundation/EcdsaSecp256k1RecoverySignature2020/lds-ecdsa-secp256k1-recovery2020-0.0.jsonld'
   }
 }

@@ -1,5 +1,5 @@
 {
-  "moduleFileExtensions": ["ts", "tsx", "js", "jsx"],
+  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "jsonld"],
   "collectCoverage": true,
   "collectCoverageFrom": [
     "packages/**/src/**/*.ts",

@@ -1,0 +1,1 @@
+export class EcdsaSecp256k1RecoveryMethod2020 {}

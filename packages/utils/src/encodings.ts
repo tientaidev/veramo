@@ -1,4 +1,5 @@
 import * as u8a from 'uint8arrays'
+import { bases } from 'multiformats/basics'
 
 export function bytesToBase64url(b: Uint8Array): string {
   return u8a.toString(b, 'base64url')
@@ -27,4 +28,19 @@ export function encodeJoseBlob(payload: {}) {
 
 export function decodeJoseBlob(blob: string) {
   return JSON.parse(u8a.toString(u8a.fromString(blob, 'base64url'), 'utf-8'))
+}
+
+export function bytesToMultibase(b: Uint8Array, base: keyof typeof bases = 'base58btc'): string {
+  return bases[base].encode(b)
+}
+
+export { bases } from 'multiformats/basics'
+
+export function hexToBytes(s: string): Uint8Array {
+  const input = s.startsWith('0x') ? s.substring(2) : s
+  return u8a.fromString(input.toLowerCase(), 'base16')
+}
+
+export function bytesToHex(b: Uint8Array): string {
+  return u8a.toString(b, 'base16')
 }

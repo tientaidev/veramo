@@ -1,20 +1,22 @@
-import { asArray, encodeJoseBlob } from '@veramo/utils'
+import { asArray, bases, bytesToMultibase, encodeJoseBlob, hexToBytes } from '@veramo/utils'
 import { RequiredAgentMethods, VeramoLdSignature } from '../ld-suites'
 import { CredentialPayload, DIDDocument, IAgentContext, IKey, TKeyType } from '@veramo/core'
 import * as u8a from 'uint8arrays'
-import { Ed25519Signature2018, Ed25519VerificationKey2018 } from '@transmute/ed25519-signature-2018'
+import { Ed25519VerificationKey2020 } from '@digitalcredentials/ed25519-verification-key-2020'
+import { Ed25519Signature2020 } from '@digitalcredentials/ed25519-signature-2020'
 
-export class VeramoEd25519Signature2018 extends VeramoLdSignature {
+export class VeramoEd25519Signature2020 extends VeramoLdSignature {
+
   getSupportedVerificationTypes(): string[] {
-    return ['Ed25519VerificationKey2018']
+    return ['Ed25519VerificationKey2020', 'Ed25519VerificationKey2018']
   }
 
   getSupportedVeramoKeyTypes(): string[] {
-    return ['Ed25519', 'Ed25519Signature2018']
+    return ['Ed25519', 'Ed25519Signature2020']
   }
 
   getContext(): string {
-    return 'https://w3id.org/security/suites/ed25519-2018/v1'
+    return 'https://w3id.org/security/suites/ed25519-2020/v1'
   }
 
   getSigningSuiteInstance(
@@ -23,14 +25,15 @@ export class VeramoEd25519Signature2018 extends VeramoLdSignature {
     verificationMethodId: string,
     context: IAgentContext<RequiredAgentMethods>,
   ): any {
+
     const controller = issuerDid
 
     // DID Key ID
-    let id = verificationMethodId
+    const id = verificationMethodId
 
     const signer = {
       // returns a JWS detached
-      sign: async (args: { data: Uint8Array }): Promise<string> => {
+      sign: async (args: { data: Uint8Array }): Promise<Uint8Array> => {
         const header = {
           alg: 'EdDSA',
           b64: false,
@@ -45,32 +48,47 @@ export class VeramoEd25519Signature2018 extends VeramoLdSignature {
           data: messageString,
           encoding: 'base64',
         })
-        return `${headerString}..${signature}`
+        return u8a.fromString(`${headerString}..${signature}`)
       },
     }
 
-    const verificationKey = new Ed25519VerificationKey2018({
+    const publicKeyMultibase = bytesToMultibase(hexToBytes(key.publicKeyHex), 'base58btc')
+
+    const options = {
       id,
       controller,
-      publicKey: u8a.fromString(key.publicKeyHex, 'base16'),
+      publicKeyMultibase,
       signer: () => signer,
       type: this.getSupportedVerificationTypes()[0],
-    })
+    }
+
+    // For now we always go through this route given the multibase key has an invalid header
+    const verificationKey = new Ed25519VerificationKey2020(options)
     // overwrite the signer since we're not passing the private key and transmute doesn't support that behavior
     verificationKey.signer = () => signer as any
+    // verificationKey.type = this.getSupportedVerificationType()
 
-    return new Ed25519Signature2018({
+    const suite = new Ed25519Signature2020({
       key: verificationKey,
       signer: signer,
     })
+
+    suite.ensureSuiteContext = () => {}
+
+    return suite
   }
 
   getVerificationSuiteInstance(): any {
-    return new Ed25519Signature2018()
+    return new Ed25519Signature2020()
   }
 
   preSigningCredModification(credential: CredentialPayload): void {
-
+    const vcJson = JSON.stringify(credential)
+    if (vcJson.indexOf('Ed25519Signature2020') > -1) {
+      if (vcJson.indexOf(this.getContext()) === -1) {
+        credential['@context'] = [...asArray(credential['@context'] || []), this.getContext()]
+      }
+    }
   }
 
   preDidResolutionModification(didUrl: string, didDoc: DIDDocument): void {

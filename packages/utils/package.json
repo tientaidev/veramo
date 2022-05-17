@@ -17,6 +17,7 @@
     "did-jwt": "^5.12.3",
     "did-jwt-vc": "^2.1.9",
     "did-resolver": "^3.1.5",
+    "multiformats": "^9.6.4",
     "uint8arrays": "^3.0.0",
     "uuid": "^8.3.0"
   },

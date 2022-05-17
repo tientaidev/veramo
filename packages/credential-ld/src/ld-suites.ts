@@ -17,18 +17,18 @@ export abstract class VeramoLdSignature {
   // Add type definition as soon as https://github.com/digitalbazaar/jsonld-signatures
   // supports those.
 
-  abstract getSupportedVerificationType(): string
+  abstract getSupportedVerificationTypes(): string[]
 
-  abstract getSupportedVeramoKeyType(): TKeyType
+  abstract getSupportedVeramoKeyTypes(): string[]
 
-  abstract getSuiteForSigning(
+  abstract getSigningSuiteInstance(
     key: IKey,
     issuerDid: string,
     verificationMethodId: string,
-    context: IAgentContext<RequiredAgentMethods>,
+    agentContext: IAgentContext<RequiredAgentMethods>,
   ): any
 
-  abstract getSuiteForVerification(): any
+  abstract getVerificationSuiteInstance(): any
 
   abstract preDidResolutionModification(didUrl: string, didDoc: DIDDocument): void
 
@@ -38,7 +38,7 @@ export abstract class VeramoLdSignature {
     // TODO: Remove invalid field 'verifiers' from Presentation. Needs to be adapted for LD credentials
     // Only remove empty array (vc.signPresentation will throw then)
     const sanitizedPresentation = presentation as any
-    if (sanitizedPresentation.verifier.length == 0) {
+    if (sanitizedPresentation?.verifier?.length == 0) {
       delete sanitizedPresentation.verifier
     }
   }
