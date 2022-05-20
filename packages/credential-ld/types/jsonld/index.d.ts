@@ -50,15 +50,15 @@ declare module '@digitalcredentials/jsonld-signatures' {
     LinkedDataSignature: {
       new({ type, proof, LDKeyClass, date, key, signer, verifier, useNativeCanonize, contextUrl }?: {
         type: string;
-        proof: object;
+        proof?: object;
         LDKeyClass: Function;
         date: any;
-        key: any;
-        signer: {
+        key?: any;
+        signer?: {
           sign: Function;
           id: string;
         };
-        verifier: {
+        verifier?: {
           verify: Function;
           id: string;
         };
@@ -194,11 +194,11 @@ declare module '@digitalcredentials/jsonld-signatures' {
     getVerificationMethod({ proof, documentLoader }: object): Promise<any>;
 
     /**
-     * @param verifyData {Uint8Array}.
-     * @param document {object} to be signed.
-     * @param proof {object}
-     * @param documentLoader {function}
-     * @param expansionMap {function}
+     * @param args.verifyData {Uint8Array}.
+     * @param args.document {object} to be signed.
+     * @param args.proof {object}
+     * @param args.documentLoader {function}
+     * @param args.expansionMap {function}
      *
      * @returns {Promise<{object}>} the proof containing the signature value.
      */

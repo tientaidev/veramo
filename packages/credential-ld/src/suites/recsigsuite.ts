@@ -8,12 +8,15 @@
 // const { LinkedDataSignature } = suites;
 
 import { suites } from "@digitalcredentials/jsonld-signatures";
+import { VerificationMethod } from "did-resolver";
 
 // const base58btc = require('@digitalcredentials/base58-universal');
 // import {
 //   Ed25519VerificationKey2020
 // } from '@digitalcredentials/ed25519-verification-key-2020';
 import { EcdsaSecp256k1RecoveryMethod2020 } from "./recmethod";
+import { decodeBase64url, extractPublicKeyHex, getEthereumAddress, stringToBytes } from "@veramo/utils";
+import { toEthereumAddress } from "@veramo/did-provider-ethr/build/ethr-did-provider";
 // import suiteContext2020 from 'ed25519-signature-2020-context';
 // import suiteContext2018 from 'ed25519-signature-2018-context';
 
@@ -24,8 +27,26 @@ import { EcdsaSecp256k1RecoveryMethod2020 } from "./recmethod";
 // // multibase base58-btc header
 // const MULTIBASE_BASE58BTC_HEADER = 'z';
 
+import * as u8a from 'uint8arrays'
+
+export type JwsDetachedSigner = {
+  sign: (args: { data: Uint8Array }) => Promise<string>
+  id: string
+}
+
+export type JwsDetachedVerifier = {
+  verify: (args: { data: Uint8Array, signature: string }) => Promise<boolean>
+  id: string
+}
+
+export type EcdsaSecp256k1RecoverySignature2020Proof = {
+  jws: string,
+  type: "EcdsaSecp256k1RecoverySignature2020",
+  [x: string]: any
+}
+
 export class EcdsaSecp256k1RecoverySignature2020 extends suites.LinkedDataSignature {
-  private requiredKeyType: string;
+  private requiredKeyTypes: string[];
 
   /**
    * @param {object} options - Options hashmap.
@@ -55,7 +76,7 @@ export class EcdsaSecp256k1RecoverySignature2020 extends suites.LinkedDataSignat
    *   canonize algorithm.
    */
   constructor({ key, signer, verifier, proof, date, useNativeCanonize }: {
-    key?: any, signer?: any, verifier?: any, proof?: any, date?: any, useNativeCanonize?: boolean
+    key?: VerificationMethod, signer?: JwsDetachedSigner, verifier?: JwsDetachedVerifier, proof?: EcdsaSecp256k1RecoverySignature2020Proof, date?: any, useNativeCanonize?: boolean
   } = {}) {
     super({
       type: 'EcdsaSecp256k1RecoverySignature2020', LDKeyClass: EcdsaSecp256k1RecoveryMethod2020,
@@ -64,7 +85,7 @@ export class EcdsaSecp256k1RecoverySignature2020 extends suites.LinkedDataSignat
     });
     // Some operations may be performed with EcdsaSecp256k1VerificationKey2019.
     // So, EcdsaSecp256k1RecoveryMethod2020 is recommended, but not strictly required.
-    this.requiredKeyType = 'EcdsaSecp256k1RecoveryMethod2020';
+    this.requiredKeyTypes = ['EcdsaSecp256k1RecoveryMethod2020', 'EcdsaSecp256k1VerificationKey2019'];
   }
 
   /**
@@ -80,14 +101,15 @@ export class EcdsaSecp256k1RecoverySignature2020 extends suites.LinkedDataSignat
    * @returns {Promise<object>} Resolves with the proof containing the signature
    *   value.
    */
-  async sign({ verifyData, proof }: { verifyData: Uint8Array, proof: object }): Promise<object> {
+  async sign({
+               verifyData,
+               proof
+             }: { verifyData: Uint8Array, proof: any }): Promise<EcdsaSecp256k1RecoverySignature2020Proof> {
     if (!(this.signer && typeof this.signer.sign === 'function')) {
       throw new Error('A signer API has not been specified.');
     }
 
-    const signatureBytes = await this.signer.sign({ data: verifyData });
-    proof.proofValue =
-      MULTIBASE_BASE58BTC_HEADER + base58btc.encode(signatureBytes);
+    proof.jws = await this.signer.sign({ data: verifyData });
 
     return proof;
   }
@@ -102,12 +124,58 @@ export class EcdsaSecp256k1RecoverySignature2020 extends suites.LinkedDataSignat
    *
    * @returns {Promise<boolean>} Resolves with the verification result.
    */
-  async verifySignature({ verifyData, verificationMethod, proof }) {
-    const { proofValue } = proof;
-    if (!(proofValue && typeof proofValue === 'string')) {
+  async verifySignature(args: { verifyData: Uint8Array, verificationMethod: VerificationMethod, proof: EcdsaSecp256k1RecoverySignature2020Proof }) {
+    const { jws } = args.proof;
+    if (!(jws && typeof jws === 'string')) {
       throw new TypeError(
-        'The proof does not include a valid "proofValue" property.');
+        'invalid_argument: The proof does not include a valid "jws" property.');
     }
+    if (jws.indexOf("..") === -1) {
+      throw new TypeError("invalid_argument: not a valid rfc7797 jws.");
+    }
+
+    const [encodedHeader, encodedSignature] = jws.split("..");
+    const header = JSON.parse(decodeBase64url(encodedHeader));
+    if (header.alg !== "ES256K-R") {
+      throw new TypeError("invalid_argument: JWS alg is not signed with ES256K-R.");
+    }
+    if (
+      header.b64 !== false ||
+      !header.crit ||
+      !header.crit.length ||
+      header.crit[0] !== "b64"
+    ) {
+      throw new TypeError("invalid_argument: JWS Header is not in rfc7797 format (not detached).");
+    }
+
+    let ethereumAddress: string | undefined = undefined
+    if (this.requiredKeyTypes.includes(args.verificationMethod.type)) {
+      ethereumAddress = getEthereumAddress(args.verificationMethod)
+      if (!ethereumAddress) {
+        const publicKeyHex = extractPublicKeyHex(args.verificationMethod)
+        ethereumAddress = toEthereumAddress(publicKeyHex)
+      }
+    } else {
+      throw new TypeError("invalid_argument: Cannot use this verification method provided to verify this proof, invalid type");
+    }
+
+    if (!ethereumAddress) {
+      throw new TypeError("invalid_argument: Cannot use this verification method provided to verify this proof, missing publicKey or ethereumAddress");
+    }
+
+    const dataToSign = u8a.concat([stringToBytes(encodedHeader + '.'), args.verifyData])
+
+
+    let publicKeyUInt8Array;
+    if (vm.publicKeyJwk) {
+      publicKeyUInt8Array = await publicKeyUInt8ArrayFromJWK(vm.publicKeyJwk);
+    }
+    if (vm.publicKeyHex) {
+      publicKeyUInt8Array = await publicKeyUInt8ArrayFromJWK(
+        await publicJWKFromPublicKeyHex(vm.publicKeyHex)
+      );
+    }
+
     if (proofValue[0] !== MULTIBASE_BASE58BTC_HEADER) {
       throw new Error('Only base58btc multibase encoding is supported.');
     }
