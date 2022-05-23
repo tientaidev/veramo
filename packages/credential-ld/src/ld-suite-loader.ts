@@ -7,7 +7,9 @@ import { TKeyType } from '@veramo/core'
 export class LdSuiteLoader {
   constructor(options: { veramoLdSignatures: VeramoLdSignature[] }) {
     options.veramoLdSignatures.forEach((obj) => {
-      this.signatureMap[obj.getSupportedVeramoKeyType()] = obj
+      // FIXME: different key types could support different signature types and different Verification Methods.
+      this.signatureMap[obj.getSupportedVeramoKeyTypes()[0]] = obj
+      this.signatureMap[obj.getSupportedVerificationTypes()[0]] = obj
     })
   }
   private signatureMap: Record<string, VeramoLdSignature> = {}
@@ -23,7 +25,7 @@ export class LdSuiteLoader {
     return Object.values(this.signatureMap)
   }
 
-  getAllSignatureSuiteTypes() {
-    return Object.values(this.signatureMap).map((x) => x.getSupportedVerificationType())
+  getAllSignatureSuiteTypes(): string[] {
+    return Array.from(Object.values(this.signatureMap)).map((x) => x.getSupportedVerificationTypes()).flat()
   }
 }

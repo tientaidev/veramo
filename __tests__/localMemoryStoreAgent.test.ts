@@ -59,7 +59,7 @@ import didManager from './shared/didManager'
 import didCommPacking from './shared/didCommPacking'
 import messageHandler from './shared/messageHandler'
 
-jest.setTimeout(30000)
+jest.setTimeout(60000)
 
 const databaseFile = `./tmp/local-database2-${Math.random().toPrecision(5)}.sqlite`
 const infuraProjectId = '3586660d179141e3801c3895de1c2eba'
@@ -197,15 +197,15 @@ const getAgent = () => agent
 const testContext = { getAgent, setup, tearDown }
 
 describe('Local in-memory integration tests', () => {
-  verifiableDataJWT(testContext)
+  // verifiableDataJWT(testContext)
   verifiableDataLD(testContext)
-  handleSdrMessage(testContext)
-  resolveDid(testContext)
-  webDidFlow(testContext)
-  saveClaims(testContext)
-  documentationExamples(testContext)
-  keyManager(testContext)
-  didManager(testContext)
-  messageHandler(testContext)
-  didCommPacking(testContext)
+  // handleSdrMessage(testContext)
+  // resolveDid(testContext)
+  // webDidFlow(testContext)
+  // saveClaims(testContext)
+  // documentationExamples(testContext)
+  // keyManager(testContext)
+  // didManager(testContext)
+  // messageHandler(testContext)
+  // didCommPacking(testContext)
 })

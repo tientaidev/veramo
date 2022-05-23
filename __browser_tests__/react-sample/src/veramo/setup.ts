@@ -9,6 +9,7 @@ import { KeyManager } from '@veramo/key-manager'
 import { DIDManager } from '@veramo/did-manager'
 import { JwtMessageHandler } from '@veramo/did-jwt'
 import { CredentialIssuer, ICredentialIssuer, W3cMessageHandler } from '@veramo/credential-w3c'
+import { CredentialIssuerLD, LdDefaultContexts, VeramoEcdsaSecp256k1RecoverySignature2020, VeramoEd25519Signature2018 } from '@veramo/credential-ld'
 // import { getDidKeyResolver, KeyDIDProvider } from '@veramo/did-provider-key'
 import { DIDComm, DIDCommMessageHandler, IDIDComm } from '@veramo/did-comm'
 import { ISelectiveDisclosure, SdrMessageHandler, SelectiveDisclosure } from '@veramo/selective-disclosure'
@@ -111,10 +112,13 @@ export const agent: TAgent<InstalledPlugins> = createAgent<InstalledPlugins>({
      *  Can't resolve 'path'
      * 'path-browserify' can be installed for brower env
      */
-    // new CredentialIssuerLD({
-    //   contextMaps: [LdDefaultContexts],
-    //   suites: [new VeramoEcdsaSecp256k1RecoverySignature2020(), new VeramoEd25519Signature2018()],
-    // }),
+    new CredentialIssuerLD({
+      contextMaps: [LdDefaultContexts],
+      suites: [
+        // new VeramoEcdsaSecp256k1RecoverySignature2020(),
+        // new VeramoEd25519Signature2018()
+      ],
+    }),
     new SelectiveDisclosure(),
   ],
 })

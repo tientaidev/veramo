@@ -10,5 +10,6 @@ export { LdDefaultContexts } from './ld-default-contexts'
 export { VeramoLdSignature } from './ld-suites'
 export * from './suites/EcdsaSecp256k1RecoverySignature2020'
 export * from './suites/Ed25519Signature2018'
+export * from './suites/Ed25519Signature2020'
 const schema = require('../plugin.schema.json')
 export { schema }

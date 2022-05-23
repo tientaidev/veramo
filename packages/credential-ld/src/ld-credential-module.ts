@@ -9,8 +9,8 @@ import {
 } from '@veramo/core'
 import fetch from 'cross-fetch'
 import Debug from 'debug'
-import { extendContextLoader, purposes } from 'jsonld-signatures'
-import * as vc from 'vc-js'
+import { extendContextLoader, purposes } from '@digitalcredentials/jsonld-signatures'
+import * as vc from '@digitalcredentials/vc'
 import { LdContextLoader } from './ld-context-loader'
 import { LdSuiteLoader } from './ld-suite-loader'
 import { RequiredAgentMethods } from './ld-suites'
@@ -46,8 +46,8 @@ export class LdCredentialModule {
 
         if (!didDoc) return
 
-        // currently Veramo LD suites can modify the resolution response for DIDs from
-        // the document Loader. This allows to fix incompatibilities between DID Documents
+        // currently, Veramo LD suites can modify the resolution response for DIDs from
+        // the document Loader. This allows us to fix incompatibilities between DID Documents
         // and LD suites to be fixed specifically within the Veramo LD Suites definition
         this.ldSuiteLoader.getAllSignatureSuites().forEach((x) => x.preDidResolutionModification(url, didDoc))
 
@@ -104,12 +104,12 @@ export class LdCredentialModule {
     const suite = this.ldSuiteLoader.getSignatureSuiteForKeyType(key.type)
     const documentLoader = this.getDocumentLoader(context)
 
-    // some suites can modify the incoming credential (e.g. add required contexts)W
+    // some suites can modify the incoming credential (e.g. add required contexts)
     suite.preSigningCredModification(credential)
 
     return await vc.issue({
       credential,
-      suite: suite.getSuiteForSigning(key, issuerDid, verificationMethodId, context),
+      suite: suite.getSigningSuiteInstance(key, issuerDid, verificationMethodId, context),
       documentLoader,
       compactProof: false,
     })
@@ -131,7 +131,7 @@ export class LdCredentialModule {
 
     return await vc.signPresentation({
       presentation,
-      suite: suite.getSuiteForSigning(key, holderDid, verificationMethodId, context),
+      suite: suite.getSigningSuiteInstance(key, holderDid, verificationMethodId, context),
       challenge,
       domain,
       documentLoader,
@@ -157,7 +157,7 @@ export class LdCredentialModule {
 
     const result = await vc.verifyCredential({
       credential,
-      suite: this.ldSuiteLoader.getAllSignatureSuites().map((x) => x.getSuiteForVerification()),
+      suite: this.ldSuiteLoader.getAllSignatureSuites().map((x) => x.getVerificationSuiteInstance()),
       documentLoader: this.getDocumentLoader(context, fetchRemoteContexts),
       purpose: new AssertionProofPurpose(),
       compactProof: false,
@@ -183,7 +183,7 @@ export class LdCredentialModule {
   ): Promise<boolean> {
     const result = await vc.verify({
       presentation,
-      suite: this.ldSuiteLoader.getAllSignatureSuites().map((x) => x.getSuiteForVerification()),
+      suite: this.ldSuiteLoader.getAllSignatureSuites().map((x) => x.getVerificationSuiteInstance()),
       documentLoader: this.getDocumentLoader(context, fetchRemoteContexts),
       challenge,
       domain,
